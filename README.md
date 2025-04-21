@@ -19,9 +19,9 @@ Uploads directly from the browser to Restash.
 ```typescript
 import {createRestashUploader} from "@restash/client";
 
-const uploader = createRestashUploader({publicKey: "pk_..."});
+const upload = createRestashUploader({publicKey: "pk_..."});
 
-const result = await uploader(file as File, {
+const result = await upload(file as File, {
   path: "uploads/", // optional
   onProgress: ({percent}) => {
     console.log(`Uploading... ${percent}%`);
