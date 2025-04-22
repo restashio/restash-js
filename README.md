@@ -1,9 +1,5 @@
 # @restash/client
 
-[![npm version](https://img.shields.io/npm/v/@restash/client.svg?style=flat&color=blue)](https://www.npmjs.com/package/@restash/client)
-[![build](https://img.shields.io/github/actions/workflow/status/restashio/restash-client/ci.yml?branch=main&label=build)](https://github.com/restashio/restash-client/actions)
-[![license](https://img.shields.io/npm/l/@restash/client)](./LICENSE)
-
 The official Restash client for uploading files directly from the browser.
 
 ## Installation
@@ -33,7 +29,7 @@ console.log("File uploaded:", result.url);
 
 ## If your team requires signed uploads
 
-Create a route to handle the signature generation using the `generateSig` function with your secret key.
+Create a route to handle the signature generation using the `generateSig` function with your `secret key`
 
 ```typescript
 import { generateSig } from "@restash/client";
