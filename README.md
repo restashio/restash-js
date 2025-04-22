@@ -29,7 +29,7 @@ console.log("File uploaded:", result.url);
 
 ## If your team requires signed uploads
 
-Create a route to handle the signature generation using the `generateSig` function with your `secret key`
+Create a route to generate signatures using the `generateSig` function with your `secret key`
 
 ```typescript
 import { generateSig } from "@restash/client";
