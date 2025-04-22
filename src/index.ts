@@ -1,6 +1,6 @@
 import axios from "axios";
-import { createHmac } from "crypto";
-import { nanoid } from "./lib/alphabet";
+import { createHmac, randomBytes, randomUUID } from "crypto";
+import * as process from "node:process";
 
 type RestashErrorResponse = {
   error: {
@@ -42,16 +42,17 @@ export type UploadResult = {
 
 export type UploadOptions = {
   /**
+   * Optional to override the file name.
+   * If not provided, the original file name will be used.
+   * If the file is a blob and this is not provided, we will generate a random string.
+   */
+  name?: string;
+
+  /**
    * Optional path to upload the file to.
    * This will determine the folder or directory the file is uploaded to.
    */
   path?: string;
-
-  /**
-   * The URL of your server route that returns a signature payload.
-   * Only required if your team has signature enforcement enabled.
-   */
-  handleSignature?: string;
 
   /**
    * Optional callback that receives real-time upload progress data.
@@ -60,13 +61,30 @@ export type UploadOptions = {
   onProgress?: ({ percent, loaded, total }: UploadProgress) => void;
 };
 
+export type RestashUploaderOptions = {
+  /**
+   * Your Restash public API key.
+   * This is required to authenticate the upload request.
+   */
+  publicKey: string;
+
+  /**
+   * The URL of your server route that returns a signature and payload.
+   * Only required if your team has signature enforcement enabled.
+   */
+  handleSignature?: string;
+};
+
 /**
  * Creates a file uploader instance using your Restash public API key.
  * Use this in the browser to upload files directly to Restash.
  */
-export const createRestashUploader = ({ publicKey }: { publicKey: string }) => {
+export const createRestashUploader = ({
+  publicKey,
+  handleSignature,
+}: RestashUploaderOptions) => {
   return async (
-    file: File,
+    file: File | Blob,
     options: UploadOptions = {},
   ): Promise<UploadResult> => {
     if (!publicKey) {
@@ -79,12 +97,24 @@ export const createRestashUploader = ({ publicKey }: { publicKey: string }) => {
       );
     }
 
-    const { name, type, size } = file;
-    const { path, handleSignature, onProgress } = options;
-
-    if (!name || !size || !type) {
-      throw new Error("File passed in is invalid");
+    if (!(file instanceof Blob)) {
+      throw new Error("Invalid file passed in. Please pass in a File or Blob");
     }
+
+    const isFile = file instanceof File;
+    const name =
+      options.name || (isFile ? file.name : randomBytes(8).toString("hex"));
+    const { type, size } = file;
+    const { path, onProgress } = options;
+
+    // set headers (spoof origin if in test mode)
+    const headers: Record<string, string> = {
+      "x-public-key": publicKey,
+      ...(process.env.NODE_ENV === "test" &&
+        process.env.SPOOFED_ORIGIN && {
+          origin: process.env.SPOOFED_ORIGIN,
+        }),
+    };
 
     let signature;
     let payload;
@@ -98,6 +128,18 @@ export const createRestashUploader = ({ publicKey }: { publicKey: string }) => {
       };
       signature = sigData.signature;
       payload = sigData.payload;
+
+      if (!signature) {
+        throw new Error(
+          "Your signature endpoint did not return a valid signature",
+        );
+      }
+
+      if (!payload) {
+        throw new Error(
+          "Your signature endpoint did not return a valid payload",
+        );
+      }
     }
 
     // make fetch request to get the signed url
@@ -105,7 +147,7 @@ export const createRestashUploader = ({ publicKey }: { publicKey: string }) => {
       "https://api.restash.io/v1/uploads/prepare",
       {
         method: "POST",
-        headers: { "x-public-key": publicKey },
+        headers,
         body: JSON.stringify({
           file: {
             name,
@@ -127,8 +169,12 @@ export const createRestashUploader = ({ publicKey }: { publicKey: string }) => {
     const { url, fields, confirmToken } = (await prepareRes.json()) as {
       url: string;
       fields: Record<string, string>;
-      confirmToken?: string;
+      confirmToken: string;
     };
+
+    if (!url || !fields || !confirmToken) {
+      throw new Error("Invalid response from prepare upload");
+    }
 
     const formData = new FormData();
     // append fields to form data
@@ -147,7 +193,6 @@ export const createRestashUploader = ({ publicKey }: { publicKey: string }) => {
         const percent = Math.round((loaded * 100) / (total || 1));
         onProgress?.({ percent, loaded, total: total || 1 });
       },
-      validateStatus: () => true,
     });
 
     if (uploadRes.status < 200 || uploadRes.status >= 300) {
@@ -159,7 +204,7 @@ export const createRestashUploader = ({ publicKey }: { publicKey: string }) => {
       "https://api.restash.io/v1/uploads/confirm",
       {
         method: "POST",
-        headers: { "x-public-key": publicKey },
+        headers,
         body: JSON.stringify({ confirmToken }),
       },
     );
@@ -177,7 +222,7 @@ export const createRestashUploader = ({ publicKey }: { publicKey: string }) => {
  * Generates a secure signature for uploads when signatures are required.
  * This function uses your secret key and must be called from your server.
  */
-export const generateRestashSig = (secretKey: string) => {
+export const generateSig = (secretKey: string) => {
   if (!secretKey) throw new Error("Secret key is required");
   if (secretKey.startsWith("pk_")) {
     throw new Error(
@@ -192,7 +237,7 @@ export const generateRestashSig = (secretKey: string) => {
   }
 
   const timestamp = Date.now();
-  const requestId = nanoid(32);
+  const requestId = randomUUID();
   const payload = `${requestId}:${timestamp}`;
   const signature = createHmac("sha256", secretKey)
     .update(payload)

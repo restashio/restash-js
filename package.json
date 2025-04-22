@@ -10,9 +10,11 @@
     "type": "git",
     "url": "https://github.com/restashio/restash-client.git"
   },
+  "homepage": "https://restash.io",
   "scripts": {
     "build": "tsc",
-    "prepublishOnly": "pnpm build"
+    "prepublishOnly": "pnpm build",
+    "test": "jest"
   },
   "exports": {
     ".": {
@@ -26,12 +28,15 @@
   "author": "Restash",
   "license": "MIT",
   "devDependencies": {
+    "@types/jest": "^29.5.14",
     "@types/node": "^22.14.1",
+    "dotenv": "^16.5.0",
+    "jest": "^29.7.0",
+    "ts-jest": "^29.3.2",
     "typescript": "^5.8.3"
   },
   "dependencies": {
     "axios": "^1.8.4",
-    "crypto": "^1.0.1",
-    "nanoid": "^5.1.5"
+    "crypto": "^1.0.1"
   }
 }
