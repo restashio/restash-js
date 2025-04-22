@@ -1,6 +1,5 @@
 import axios from "axios";
 import { createHmac, randomBytes, randomUUID } from "crypto";
-import * as process from "node:process";
 
 type RestashErrorResponse = {
   error: {
