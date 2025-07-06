@@ -1,7 +1,7 @@
 {
-  "name": "@restash/client",
-  "version": "1.0.3",
-  "description": "The official Restash client for uploading files directly from the browser.",
+  "name": "@restash/restash-js",
+  "version": "0.5.0",
+  "description": "The official Restash js client for uploading files directly from the browser.",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "type": "module",

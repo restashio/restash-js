@@ -37,6 +37,9 @@ export type UploadResult = {
 
   /** MIME type of the file */
   contentType: string;
+
+  /** Any additional metadata associated with the file */
+  metadata: Record<string, string> | null;
 };
 
 export type UploadOptions = {
@@ -58,6 +61,12 @@ export type UploadOptions = {
    * Useful for showing a progress bar or percentage.
    */
   onProgress?: ({ percent, loaded, total }: UploadProgress) => void;
+
+  /**
+   * Optional metadata to associate with the file.
+   * This can be any key-value pairs you want to store with the file.
+   */
+  metadata?: Record<string, string>;
 };
 
 export type RestashUploaderOptions = {
@@ -154,6 +163,7 @@ export const createRestashUploader = ({
             size,
             ...(path && { path }),
           },
+          ...(options.metadata && { metadata: options.metadata }),
           ...(signature && { signature }),
           ...(payload && { payload }),
         }),
